@@ -1,0 +1,5 @@
+# Copy artifacts I created into your project:  
+# - Frontend code → frontend/src/  
+# - Backend code → backend/src/  
+# - Smart contracts → smart-contracts/contracts/  
+# - Package.json files to each folder
