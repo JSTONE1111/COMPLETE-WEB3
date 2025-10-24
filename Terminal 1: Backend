@@ -1,0 +1,7 @@
+cd backend  
+npm run dev  
+  
+# Should see:  
+# ✅ MongoDB connected  
+# ✅ Redis connected  
+# 🚀 Backend Server Running on port 3000
