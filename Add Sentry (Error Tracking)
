@@ -1,0 +1,5 @@
+Frontend  
+npm install @sentry/react  
+  
+# Backend  
+npm install @sentry/node
