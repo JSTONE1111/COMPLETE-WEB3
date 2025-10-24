@@ -1,0 +1,4 @@
+cd smart-contracts  
+npx hardhat node  
+  
+# Local blockchain running on http://localhost:8545
