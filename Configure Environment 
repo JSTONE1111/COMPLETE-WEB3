@@ -1,0 +1,7 @@
+# Copy your super duper secrets file to .env in each folder  
+cp /path/to/super-duper-secrets.env frontend/.env  
+cp /path/to/super-duper-secrets.env backend/.env  
+cp /path/to/super-duper-secrets.env smart-contracts/.env  
+  
+# Make sure .gitignore blocks .env  
+echo ".env" >> .gitignore
