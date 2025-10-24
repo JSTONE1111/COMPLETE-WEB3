@@ -1,0 +1,4 @@
+INFURA_PROJECT_ID=your_infura_id  
+PRIVATE_KEY=your_deployer_private_key  
+ETHERSCAN_API_KEY=your_etherscan_key  
+POLYGONSCAN_API_KEY=your_polygonscan_key
