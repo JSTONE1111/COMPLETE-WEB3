@@ -1,0 +1,14 @@
+# Create project structure  
+mkdir web3-platform && cd web3-platform  
+  
+# Create folders  
+mkdir -p frontend/src/{components,hooks,services,utils,pages}  
+mkdir -p backend/src/{routes,services,middleware,models}  
+mkdir -p smart-contracts/{contracts,scripts,test}  
+mkdir -p .github/workflows  
+  
+# Initialize projects  
+cd frontend && npm init -y  
+cd ../backend && npm init -y  
+cd ../smart-contracts && npm init -y  
+cd ..
