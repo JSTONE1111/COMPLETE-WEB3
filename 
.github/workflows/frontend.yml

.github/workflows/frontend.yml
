@@ -1,0 +1,29 @@
+Use your super duper secrets file!  
+# Just copy the relevant variables:  
+  
+PORT=3000  
+NODE_ENV=development  
+  
+# Database  
+MONGODB_URI=mongodb://localhost:27017/web3platform  
+REDIS_URL=redis://localhost:6379  
+  
+# Blockchain  
+INFURA_PROJECT_ID=your_infura_id  
+PRIVATE_KEY=your_deployer_private_key  
+ETHERSCAN_API_KEY=your_etherscan_key  
+POLYGONSCAN_API_KEY=your_polygonscan_key  
+  
+# Auth  
+JWT_SECRET=your_jwt_secret_32_chars_min  
+SESSION_SECRET=your_session_secret  
+  
+# APIs  
+OPENAI_API_KEY=your_openai_key
+
+Smart Contracts (.env)
+
+INFURA_PROJECT_ID=your_infura_id  
+PRIVATE_KEY=your_deployer_private_key  
+ETHERSCAN_API_KEY=your_etherscan_key  
+POLYGONSCAN_API_KEY=your_polygonscan_key
