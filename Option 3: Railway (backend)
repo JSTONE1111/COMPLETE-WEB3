@@ -1,0 +1,8 @@
+cd backend  
+  
+# Install Railway CLI  
+npm i -g @railway/cli  
+  
+# Login & deploy  
+railway login  
+railway up
