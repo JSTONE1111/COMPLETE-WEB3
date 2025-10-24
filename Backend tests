@@ -1,0 +1,5 @@
+cd backend  
+npm test  
+  
+# Test specific file  
+npm test -- auth.test.js
