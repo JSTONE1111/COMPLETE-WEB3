@@ -1,0 +1,18 @@
+# Frontend  
+cd frontend  
+npm install react react-dom react-router-dom ethers wagmi viem  
+npm install @rainbow-me/rainbowkit @tanstack/react-query axios  
+npm install recharts lucide-react tailwindcss autoprefixer postcss  
+npm install -D vite @vitejs/plugin-react  
+  
+# Backend  
+cd ../backend  
+npm install express dotenv ethers siwe cors helmet  
+npm install express-rate-limit mongoose redis jsonwebtoken bcrypt axios ws  
+npm install -D nodemon jest supertest  
+  
+# Smart Contracts  
+cd ../smart-contracts  
+npm install --save-dev hardhat @nomicfoundation/hardhat-toolbox  
+npm install --save-dev @nomiclabs/hardhat-ethers @nomiclabs/hardhat-etherscan  
+npm install @openzeppelin/contracts
