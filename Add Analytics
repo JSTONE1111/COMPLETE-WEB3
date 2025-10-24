@@ -1,0 +1,5 @@
+Google Analytics  
+npm install react-ga4  
+  
+# Mixpanel  
+npm install mixpanel-browser
