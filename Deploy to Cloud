@@ -1,0 +1,16 @@
+# Frontend to Azure Static Web Apps  
+cd frontend  
+npm run build  
+  
+az staticwebapp create \  
+  --name web3-platform-frontend \  
+  --resource-group your-resource-group \  
+  --location "East US 2" \  
+  --source ./dist  
+  
+# Backend to Azure App Service  
+cd backend  
+az webapp up \  
+  --name web3-platform-api \  
+  --resource-group your-resource-group \  
+  --runtime "NODE:18-lts"
