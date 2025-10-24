@@ -1,0 +1,12 @@
+cd smart-contracts  
+  
+# Compile contracts  
+npx hardhat compile  
+  
+# Deploy  
+npx hardhat run scripts/deploy.js --network mumbai  
+  
+# Save contract addresses!  
+# PlatformToken: 0x...  
+# PlatformNFT: 0x...  
+# TokenStaking: 0x...
