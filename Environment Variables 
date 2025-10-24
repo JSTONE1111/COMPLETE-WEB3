@@ -1,0 +1,4 @@
+VITE_API_URL=http://localhost:3000  
+VITE_INFURA_PROJECT_ID=your_infura_id  
+VITE_WALLETCONNECT_PROJECT_ID=your_walletconnect_id  
+VITE_CHAIN_ID=137
