@@ -1,0 +1,8 @@
+cd smart-contracts  
+npx hardhat test  
+  
+# Test specific file  
+npx hardhat test test/Token.test.js  
+  
+# With gas reporting  
+REPORT_GAS=true npx hardhat test
