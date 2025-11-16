@@ -1,0 +1,148 @@
+#!/bin/bash
+# Quick setup for private repository merging
+# This script handles GitHub authentication and setup
+
+set -e
+
+echo "🔒 Private Repository Merge Setup"
+echo "=================================="
+echo ""
+
+# Check if GITHUB_TOKEN is already set
+if [ -n "$GITHUB_TOKEN" ]; then
+    echo "✓ GITHUB_TOKEN already set in environment"
+else
+    echo "GitHub Personal Access Token required for private repos"
+    echo ""
+    echo "To create a token:"
+    echo "1. Go to: https://github.com/settings/tokens"
+    echo "2. Click 'Generate new token (classic)'"
+    echo "3. Select scopes: 'repo' (full control)"
+    echo "4. Copy the token"
+    echo ""
+    read -p "Enter your GitHub token: " -s token
+    echo ""
+    
+    export GITHUB_TOKEN="$token"
+    
+    # Save to ~/.bashrc or ~/.zshrc for persistence
+    read -p "Save token to shell profile? (y/N) " -n 1 -r
+    echo ""
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        if [ -f ~/.bashrc ]; then
+            echo "export GITHUB_TOKEN='$token'" >> ~/.bashrc
+            echo "✓ Saved to ~/.bashrc"
+        elif [ -f ~/.zshrc ]; then
+            echo "export GITHUB_TOKEN='$token'" >> ~/.zshrc
+            echo "✓ Saved to ~/.zshrc"
+        fi
+    fi
+fi
+
+# Verify token works
+echo ""
+echo "Verifying token..."
+response=$(curl -s -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/user)
+
+if echo "$response" | grep -q "login"; then
+    username=$(echo "$response" | grep -o '"login": *"[^"]*"' | sed 's/"login": *"\(.*\)"/\1/')
+    echo "✓ Token valid! Authenticated as: $username"
+else
+    echo "✗ Token invalid or expired"
+    exit 1
+fi
+
+# Check rate limit
+echo ""
+echo "Checking API rate limits..."
+rate_info=$(curl -s -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/rate_limit)
+remaining=$(echo "$rate_info" | grep -o '"remaining": *[0-9]*' | head -1 | grep -o '[0-9]*')
+limit=$(echo "$rate_info" | grep -o '"limit": *[0-9]*' | head -1 | grep -o '[0-9]*')
+
+echo "Rate limit: $remaining / $limit remaining"
+
+if [ "$remaining" -lt 100 ]; then
+    echo "⚠️  Warning: Low rate limit remaining"
+    echo "Consider waiting or using a different token"
+fi
+
+# Get organization access
+echo ""
+read -p "Enter your GitHub organization name: " org_name
+
+echo ""
+echo "Fetching accessible repositories..."
+repos_response=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+    "https://api.github.com/orgs/$org_name/repos?per_page=1")
+
+if echo "$repos_response" | grep -q "Not Found"; then
+    echo "✗ Organization '$org_name' not found or token lacks access"
+    echo ""
+    echo "Make sure:"
+    echo "1. Organization name is correct"
+    echo "2. Token has 'repo' scope"
+    echo "3. You're a member of the organization"
+    exit 1
+fi
+
+echo "✓ Access to '$org_name' confirmed"
+
+# Generate repo list
+echo ""
+echo "Generating repository list..."
+python3 generate-repo-list.py "$org_name" --token "$GITHUB_TOKEN"
+
+if [ -f "repos-list.txt" ]; then
+    repo_count=$(grep -c "^https://" repos-list.txt || echo "0")
+    echo ""
+    echo "✓ Found $repo_count repositories"
+    echo "✓ Created: repos-list.txt"
+fi
+
+# Setup git credentials
+echo ""
+echo "Configuring git credentials..."
+git config --global credential.helper store
+
+# Create credentials file
+mkdir -p ~/.git-credentials-backup
+if [ -f ~/.git-credentials ]; then
+    cp ~/.git-credentials ~/.git-credentials-backup/backup-$(date +%s)
+fi
+
+echo "https://${GITHUB_TOKEN}@github.com" > ~/.git-credentials
+chmod 600 ~/.git-credentials
+echo "✓ Git credentials configured"
+
+# Final instructions
+echo ""
+echo "======================================"
+echo "✓ Setup complete!"
+echo "======================================"
+echo ""
+echo "Next steps:"
+echo "1. Review repos-list.txt (optional)"
+echo "   nano repos-list.txt"
+echo ""
+echo "2. Start the merge:"
+echo "   ./merge-repos.sh repos-list.txt"
+echo ""
+echo "3. Monitor progress in merge-logs/"
+echo ""
+echo "Note: Your token is stored in:"
+echo "  - Environment variable (this session)"
+echo "  - ~/.git-credentials (for git operations)"
+
+# Offer to start merge
+echo ""
+read -p "Start merge now? (y/N) " -n 1 -r
+echo ""
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    if [ -f "repos-list.txt" ] && [ -f "merge-repos.sh" ]; then
+        chmod +x merge-repos.sh
+        ./merge-repos.sh repos-list.txt
+    else
+        echo "✗ Required files not found"
+        echo "Make sure merge-repos.sh exists"
+    fi
+fi
