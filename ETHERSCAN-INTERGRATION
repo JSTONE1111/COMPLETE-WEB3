@@ -1,0 +1,455 @@
+# 🔗 Etherscan Integration Guide
+
+Monitor Ethereum transactions and log them to your Google Sheet automatically.
+
+---
+
+## 🎯 What This Does
+
+✅ **Monitors Ethereum addresses** for:
+- Normal ETH transactions (in/out)
+- Internal transactions (contract calls)
+- ERC-20 token transfers
+- Transaction status (success/failed)
+- Gas fees and block numbers
+
+✅ **Logs everything to Google Sheets**:
+- Formatted with colors and emojis
+- Clickable Etherscan links
+- Timestamps and readable dates
+- Direction indicators (📥 IN / 📤 OUT)
+
+✅ **Real-time gas prices**:
+- Low, Average, and Fast gas prices
+- Logged to console every check
+
+---
+
+## 🚀 Quick Setup
+
+### 1️⃣ Get Etherscan API Key
+
+1. Go to [Etherscan.io](https://etherscan.io/)
+2. Sign up or log in
+3. Navigate to **API Keys** → **Add** → Create new key
+4. Copy your API key
+
+**Free tier limits:**
+- 5 calls/second
+- 100,000 calls/day
+- Perfect for personal monitoring!
+
+### 2️⃣ Update .env File
+
+```bash
+# Add to your existing .env
+ETHERSCAN_API_KEY=YourEtherscanAPIKeyHere
+
+# Add addresses to monitor (comma-separated)
+MONITORED_ADDRESSES=0x1234...,0x5678...,0x9abc...
+```
+
+**Example:**
+```bash
+ETHERSCAN_API_KEY=ABC123XYZ789
+MONITORED_ADDRESSES=0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045,0x28C6c06298d514Db089934071355E5743bf21d60
+```
+
+### 3️⃣ Install Dependencies
+
+```bash
+npm install axios
+```
+
+### 4️⃣ Run the Monitor
+
+**Option 1: Standalone**
+```bash
+node etherscan-monitor.js
+```
+
+**Option 2: With Docker Compose**
+```bash
+docker-compose up -d
+```
+
+**Option 3: Integrated with GitHub Logger**
+```bash
+# Run both services
+npm start &
+node etherscan-monitor.js
+```
+
+---
+
+## 📊 What Gets Logged
+
+### ETH Transactions Sheet
+
+| Column | Example | Description |
+|--------|---------|-------------|
+| Timestamp | 2024-10-02T20:15:45Z | ISO format |
+| Date/Time | Oct 2, 2024, 8:15 PM | Human-readable |
+| Direction | 📥 IN | Incoming/outgoing/internal |
+| From | 0x1234...5678 | Sender address |
+| To | 0xabcd...ef01 | Recipient address |
+| Amount | 0.5 ETH | Transaction value |
+| Tx Hash | 0x789... | Full transaction hash |
+| Link | View | Clickable Etherscan link |
+| Status | ✅ Success | Transaction status |
+| Gas Fee | 0.002 ETH | Total gas cost |
+| Block | 18123456 | Block number |
+| Type | Normal | Normal/Internal/ERC-20 |
+
+### Token Transfers Sheet
+
+Same structure, but:
+- Amount shows token quantity
+- Token column shows token symbol/name
+- Logs ERC-20, ERC-721, ERC-1155 transfers
+
+---
+
+## 🔍 Monitoring Details
+
+### What Gets Tracked
+
+**Normal Transactions:**
+- ETH transfers between addresses
+- Contract deployments
+- Failed transactions (logged separately)
+
+**Internal Transactions:**
+- Contract-to-contract transfers
+- Smart contract interactions
+- Multi-step transactions
+
+**Token Transfers:**
+- ERC-20 token movements
+- NFT transfers (ERC-721/1155)
+- Token contract details
+
+### Polling Frequency
+
+Default: **Every 5 minutes**
+
+Adjust in code:
+```javascript
+// Change 5 to desired minutes
+setInterval(async () => {
+  await monitorAddresses();
+}, 5 * 60 * 1000);
+```
+
+### Block Tracking
+
+The monitor tracks the last checked block for each address to avoid:
+- ❌ Duplicate entries
+- ❌ Re-logging old transactions
+- ✅ Only new transactions logged
+
+---
+
+## 🎨 Sheet Formatting
+
+### Automatic Styling
+
+- **Headers**: Dark blue background, white bold text
+- **Direction**: Emoji indicators (📥📤🔄)
+- **Status**: ✅ Success / ❌ Failed
+- **Links**: Clickable "View" buttons → Etherscan
+- **Frozen rows**: Headers stay visible when scrolling
+- **Home button**: Quick navigation
+
+### Color Coding (Future Enhancement)
+
+Add conditional formatting:
+```javascript
+// In logTransactionToSheet function
+const bgColor = direction === "IN" 
+  ? { red: 0.8, green: 1, blue: 0.8 }  // Light green
+  : { red: 1, green: 0.9, blue: 0.9 }; // Light red
+```
+
+---
+
+## 📈 Example Output
+
+### Console Logs
+
+```
+🚀 Starting Etherscan Monitor...
+📍 Monitoring addresses: 0xd8dA...96045, 0x28C6...1d60
+✅ Etherscan sheets initialized
+
+🔍 Checking for new transactions...
+✅ Logged Normal transaction: 0x1234abc...
+✅ Logged ERC-20 transaction: 0x5678def...
+✅ Logged Internal transaction: 0x9abc123...
+⛽ Gas Prices - Low: 25 | Avg: 30 | High: 40
+
+🔍 Checking for new transactions...
+(No new transactions)
+⛽ Gas Prices - Low: 28 | Avg: 32 | High: 42
+```
+
+### Google Sheet View
+
+```
+| 🏠 Home | 📥 IN | 0x1234...5678 | 0.5 ETH | ✅ Success |
+|---------|-------|---------------|---------|------------|
+| Oct 2   | 📤 OUT| 0xabcd...ef01 | 0.2 ETH | ✅ Success |
+| Oct 2   | 🔄 INT| 0x9876...4321 | 0.0 ETH | ✅ Success |
+```
+
+---
+
+## 🔐 Security Best Practices
+
+### API Key Protection
+
+✅ **Never commit** `.env` to Git
+✅ **Use environment variables** in production
+✅ **Rotate keys** regularly
+✅ **Monitor usage** on Etherscan dashboard
+
+### Address Privacy
+
+⚠️ **Consider**: Monitored addresses are visible in logs
+- Use separate monitoring accounts if needed
+- Don't monitor sensitive addresses in shared sheets
+- Use private sheets for personal wallets
+
+---
+
+## 🐛 Troubleshooting
+
+### "Invalid API Key Response"
+
+**Cause:** Wrong or expired API key
+
+**Fix:**
+```bash
+# Verify key is correct
+echo $ETHERSCAN_API_KEY
+
+# Get new key from Etherscan
+# Update .env
+```
+
+### "Rate Limit Exceeded"
+
+**Cause:** Too many API calls (free tier: 5/sec)
+
+**Fix:**
+```javascript
+// Add delay between addresses
+await new Promise(resolve => setTimeout(resolve, 300)); // 300ms delay
+```
+
+### No Transactions Showing
+
+**Cause:** 
+- New addresses (no history)
+- Wrong address format
+- Network issues
+
+**Fix:**
+```bash
+# Test address on Etherscan website first
+# Verify address format (0x...)
+# Check console for errors
+```
+
+### Sheet Not Created
+
+**Cause:** Google Sheets API permissions
+
+**Fix:**
+```bash
+# Run OAuth flow again
+node server.js
+# Visit /auth route
+# Re-authorize with Google
+```
+
+---
+
+## 🌐 Multi-Chain Support
+
+### Add Polygon Support
+
+```javascript
+// In etherscan-monitor.js
+const POLYGON_API_KEY = process.env.POLYGONSCAN_API_KEY;
+const POLYGON_BASE_URL = "https://api.polygonscan.com/api";
+
+async function fetchPolygonTransactions(address) {
+  const response = await axios.get(POLYGON_BASE_URL, {
+    params: {
+      module: "account",
+      action: "txlist",
+      address: address,
+      apikey: POLYGON_API_KEY,
+    },
+  });
+  return response.data.result;
+}
+```
+
+### Add BSC Support
+
+```javascript
+const BSC_API_KEY = process.env.BSCSCAN_API_KEY;
+const BSC_BASE_URL = "https://api.bscscan.com/api";
+```
+
+### Add Arbitrum/Optimism
+
+Same pattern — each chain has its own explorer API!
+
+---
+
+## 📊 Advanced Features
+
+### Filter by Value
+
+Only log transactions above threshold:
+
+```javascript
+// In monitorAddresses()
+for (const tx of normalTxs) {
+  const ethValue = weiToEth(tx.value);
+  if (parseFloat(ethValue) > 0.01) { // Only log > 0.01 ETH
+    await logTransactionToSheet(tx, "Normal", address);
+  }
+}
+```
+
+### Alert on Large Transactions
+
+```javascript
+// Add Slack/Discord webhook
+if (parseFloat(weiToEth(tx.value)) > 10) { // Alert if > 10 ETH
+  await sendSlackAlert(`🚨 Large transaction: ${weiToEth(tx.value)} ETH`);
+}
+```
+
+### Historical Backfill
+
+```javascript
+// Load last 1000 transactions on first run
+async function backfillHistory(address) {
+  const txs = await fetchTransactions(address, 0);
+  for (const tx of txs.slice(0, 1000)) {
+    await logTransactionToSheet(tx, "Normal", address);
+  }
+}
+```
+
+### Gas Price Tracking
+
+Log gas prices to sheet:
+
+```javascript
+async function logGasPrices(gasPrice) {
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: process.env.SHEET_ID,
+    range: "Gas Tracker!A:D",
+    valueInputOption: "USER_ENTERED",
+    resource: {
+      values: [[
+        new Date().toISOString(),
+        gasPrice.SafeGasPrice,
+        gasPrice.ProposeGasPrice,
+        gasPrice.FastGasPrice,
+      ]],
+    },
+  });
+}
+```
+
+---
+
+## 🎯 Use Cases
+
+### Personal Portfolio Tracking
+Monitor your wallets, see all transactions in one place
+
+### Smart Contract Monitoring
+Track interactions with your deployed contracts
+
+### Whale Watching
+Monitor known whale addresses for trading signals
+
+### DeFi Activity
+Track liquidity pool transactions, yield farming
+
+### NFT Sales
+Monitor NFT marketplace transactions
+
+### Tax Reporting
+Export sheet as CSV for tax software
+
+---
+
+## 📦 Docker Deployment
+
+### Build and Run
+
+```bash
+# Using docker-compose (includes both services)
+docker-compose up -d
+
+# View logs
+docker-compose logs -f etherscan-monitor
+```
+
+### Standalone Docker
+
+```bash
+# Build image
+docker build -t etherscan-monitor .
+
+# Run container
+docker run -d \
+  --name etherscan-monitor \
+  --env-file .env \
+  -v $(pwd)/credentials.json:/app/credentials.json:ro \
+  etherscan-monitor \
+  node etherscan-monitor.js
+```
+
+---
+
+## 🎊 What You Now Have
+
+✨ **Automated blockchain monitoring**:
+- Real-time transaction tracking
+- Multi-address support
+- Token transfer logging
+- Gas price monitoring
+
+📊 **Professional logging**:
+- Google Sheets integration
+- Formatted and styled
+- Clickable Etherscan links
+- Direction indicators
+
+🔄 **Production-ready**:
+- Docker support
+- Error handling
+- Rate limit management
+- Block tracking
+
+---
+
+## 🚀 Next Steps
+
+Want to add:
+- **Prometheus metrics** for monitoring?
+- **Webhook alerts** (Slack/Discord) on large transactions?
+- **Web dashboard** to view transactions live?
+- **Multi-chain support** (Polygon, BSC, Arbitrum)?
+
+Let me know! 🔥
