@@ -1,0 +1,309 @@
+Repository: https://github.com/JASON-SIMPSON/ledger-ai-blueprint (placeholder)
+This PDF contains the full compiled conversation, code snippets, configuration files, and instructions exchanged during the session. It includes smart contracts,
+frontend components, Hardhat scripts, Docker configuration, GitHub Actions workflows, and environment templates.
+
+
+Repository: https://github.com/JASON-SIMPSON/ledger-ai-blueprint (placeholder)
+This PDF contains the full compiled conversation, code snippets, configuration files, and instructions exchanged during the session. It includes smart contracts,
+frontend components, Hardhat scripts, Docker configuration, GitHub Actions workflows, and environment templates.
+
+1. Conversation Log (Important steps & decisions)
+The user and assistant iterated to build a full-stack project: a DeFi dashboard frontend (React + Vite + Tailwind), smart contracts (Solidity), Hardhat deployment
+scripts, Docker + docker-compose, GitHub Actions workflows for CI/CD and auto-sign/deploy, and a notifier integrating Ledger Flex, Slack, Discord, and
+SendGrid. Decisions made during the conversation: - Project scaffold name: defi- dashboard / ledger-ai-blueprint - Frontend: Vite + React + Tailwind, component
+DeFiDashboard.jsx using ethers v6 - Smart contracts: MySmartContract.sol (basic deposit/withdraw/owner) and DeFiVault.sol (vault) - Hardhat used for
+compilation, testing, and deployment - GitHub Actions workflows: ci.yml and auto-sign-deploy.yml (SSH signing + deploy) - Docker: Dockerfile builds frontend
+and serves via nginx; docker-compose runs frontend + Hardhat node - Notifier: scripts/ledgerflex-notifier.js listens to contract events and notifies third-party
+services - Env templates provided for dev/test/prod and Railway/DigitalOcean - PDF generation of the conversation and project files requested and produced
+
+2. Project File List
+- README.md - package.json (root) - hardhat.config.js - contracts/MySmartContract.sol - contracts/DeFiVault.sol - scripts/deploy.js - scripts/ledgerflex-notifier.js
+- test/MySmartContract.test.js - test/DeFiVault.test.js - frontend/ (Vite + React + Tailwind) - frontend/package.json - frontend/src/components/DeFiDashboard.jsx
+- frontend/src/App.jsx - frontend/src/main.jsx - frontend/index.html - frontend/vite.config.js - Dockerfile - docker-compose.yml - .github/workflows/ci.yml -
+.github/workflows/auto-sign-deploy.yml - envs/.env.dev, .env.test, .env.prod, .env.railway, .env.digitalocean - gh_secret_commands.sh
+
+
+3. Smart Contracts
+// MySmartContract.sol
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.27;
+contract MySmartContract {
+ address public owner;
+ mapping(address => uint256) public balances;
+ event Deposited(address indexed user, uint256 amount);
+ event Withdrawn(address indexed user, uint256 amount);
+ event OwnershipTransferred(address indexed oldOwner, address indexed newOwner);
+ constructor() { owner = msg.sender; }
+ modifier onlyOwner() { require(msg.sender == owner, "Not the owner"); _; }
+ function deposit() external payable { require(msg.value > 0, "Deposit must be greater than zero"); balances[msg.sender] += msg.value; emit Deposited(msg.sender, msg.value); }
+ function withdraw(uint256 amount) external { require(balances[msg.sender] >= amount, "Insufficient balance"); balances[msg.sender] -= amount; payable(msg.sender).transfer(amount); emit Withdrawn(msg.sender, amount); }
+ function transferOwnership(address newOwner) external onlyOwner { require(newOwner != address(0), "Invalid address"); address oldOwner = owner; owner = newOwner; emit OwnershipTransferred(oldOwner, newOwner); }
+ function contractBalance() external view returns (uint256) { return address(this).balance; }
+}
+// DeFiVault.sol
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.17;
+contract DeFiVault {
+ address public owner;
+ mapping(address => uint256) public balances;
+ event Deposited(address indexed user, uint256 amount);
+ event Withdrawn(address indexed user, uint256 amount);
+ event OwnershipTransferred(address indexed oldOwner, address indexed newOwner);
+ constructor() { owner = msg.sender; }
+ modifier onlyOwner() { require(msg.sender == owner, "Not the owner"); _; }
+ function deposit() external payable { require(msg.value > 0, "Must send ETH"); balances[msg.sender] += msg.value; emit Deposited(msg.sender, msg.value); }
+ function withdraw(uint256 amount) external { require(balances[msg.sender] >= amount, "Insufficient balance"); balances[msg.sender] -= amount; (bool sent, ) = payable(msg.sender).call{value: amount}(""); require(sent, "Transfer failed"); emit Withdrawn(msg.sender, amount); }
+ function transferOwnership(address newOwner) external onlyOwner { require(newOwner != address(0), "Invalid address"); address old = owner; owner = newOwner; emit OwnershipTransferred(old, newOwner); }
+ function contractBalance() external view returns (uint256) { return address(this).balance; }
+
+
+4. Hardhat & Deployment Scripts
+// hardhat.config.js
+require("@nomicfoundation/hardhat-toolbox");
+require("dotenv").config();
+const PRIVATE_KEY = process.env.PRIVATE_KEY || "";
+const RPC_URL = process.env.RPC_URL || "";
+const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY || "";
+module.exports = {
+ solidity: { version: "0.8.27", settings: { optimizer: { enabled: true, runs: 200 } } },
+ networks: {
+ hardhat: {},
+ sepolia: { url: RPC_URL, accounts: PRIVATE_KEY !== "" ? [PRIVATE_KEY] : [] },
+ mainnet: { url: RPC_URL, accounts: PRIVATE_KEY !== "" ? [PRIVATE_KEY] : [] }
+ },
+ etherscan: { apiKey: ETHERSCAN_API_KEY }
+};
+// scripts/deploy.js
+const hre = require("hardhat");
+async function main() {
+ console.log("■ Starting deployment...");
+ const [deployer] = await hre.ethers.getSigners();
+ console.log(`Deployer address: ${deployer.address}`);
+ await hre.run("compile");
+ const Contract = await hre.ethers.getContractFactory("MySmartContract");
+ const contract = await Contract.deploy();
+ await contract.waitForDeployment();
+ console.log(`Contract deployed at: ${contract.target}`);
+ if (process.env.ETHERSCAN_API_KEY) { await hre.run("verify:verify", { address: contract.target, constructorArguments: [] }); console.log("Verified"); }
+}
+main().catch((error) => { console.error("Deployment failed:", error); process.exit(1); });
+
+
+
+. Tests
+// test/MySmartContract.test.js (example)
+const { expect } = require("chai");
+const { ethers } = require("hardhat");
+describe("MySmartContract", function () {
+ let contract, owner, user1;
+ beforeEach(async function () {
+ [owner, user1] = await ethers.getSigners();
+ const Factory = await ethers.getContractFactory("MySmartContract");
+ contract = await Factory.deploy();
+ await contract.waitForDeployment();
+ });
+ it("sets owner", async function () { expect(await contract.owner()).to.equal(owner.address); });
+ it("deposit/withdraw", async function () {
+ await contract.connect(user1).deposit({ value: ethers.parseEther("1.0") });
+ expect(await contract.balances(user1.address)).to.equal(ethers.parseEther("1.0"));
+ await contract.connect(user1).withdraw(ethers.parseEther("0.5"));
+ expect(await contract.balances(user1.address)).to.equal(ethers.parseEther("0.5"));
+
+
+
+6. Frontend — DeFiDashboard.jsx (React + ethers v6)
+// frontend/src/components/DeFiDashboard.jsx
+import React, { useEffect, useState } from "react";
+import { ethers } from "ethers";
+const ABI = [
+ "function deposit() payable",
+ "function withdraw(uint256 amount)",
+ "function balances(address) view returns (uint256)",
+ "function contractBalance() view returns (uint256)",
+ "event Deposited(address indexed user, uint256 amount)",
+ "event Withdrawn(address indexed user, uint256 amount)"
+];
+export default function DeFiDashboard({ contractAddress }) {
+ const [provider, setProvider] = useState(null);
+ const [signer, setSigner] = useState(null);
+ const [account, setAccount] = useState(null);
+ const [contract, setContract] = useState(null);
+ const [ethBalance, setEthBalance] = useState("0.0");
+ const [contractBalance, setContractBalance] = useState("0.0");
+ const [userBalance, setUserBalance] = useState("0.0");
+ const [txStatus, setTxStatus] = useState(null);
+ const [depositAmount, setDepositAmount] = useState("0.01");
+ const [withdrawAmount, setWithdrawAmount] = useState("0.01");
+ useEffect(() => {
+ if (!contractAddress) return;
+ if (provider) { const c = new ethers.Contract(contractAddress, ABI, provider); setContract(c); }
+ }, [provider, contractAddress]);
+ async function connectMetaMask() {
+ if (!window.ethereum) { alert("MetaMask not found"); return; }
+ await window.ethereum.request({ method: "eth_requestAccounts" });
+ const p = new ethers.BrowserProvider(window.ethereum);
+ const s = await p.getSigner();
+ const addr = await s.getAddress();
+ setProvider(p); setSigner(s); setAccount(addr);
+ }
+ async function handleDeposit(e) { e.preventDefault(); if (!signer) { alert("connect first"); return; } const contractWithSigner = contract.connect(signer); const value = ethers.parseEther(depositAmount); const tx = await contractWithSigner.deposit({ value }); setTxStatus(`${tx.hash}`); await tx.wait(); await refreshBalances(); }
+ async function handleWithdraw(e) { e.preventDefault(); if (!signer) return; const contractWithSigner = contract.connect(signer); const amount = ethers.parseEther(withdrawAmount); const tx = await contractWithSigner.withdraw(amount); setTxStatus(`${tx.hash}`); await tx.wait(); await refreshBalances(); }
+ async function refreshBalances() { try { const bal = await provider.getBalance(account); setEthBalance(ethers.formatEther(bal)); const ub = await contract.balances(account); setUserBalance(ethers.formatEther(ub)); const cb = await contract.contractBalance(); setContractBalance(ethers.formatEther(cb)); } catch (err) { console.error(err); } }
+ return (
+ <div className="max-w-3xl mx-auto p-6"> ... UI omitted for brevity ...
+
+
+7. Docker & docker-compose
+# Dockerfile
+FROM node:18 AS build
+WORKDIR /app
+COPY frontend/package*.json frontend/
+RUN cd frontend && npm ci
+COPY frontend/ frontend/
+RUN cd frontend && npm run build
+FROM nginx:alpine
+COPY --from=build /app/frontend/dist /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+# docker-compose.yml
+version: '3.8'
+services:
+ frontend:
+ build: .
+ ports:
+ - "3000:80"
+ environment:
+ - VITE_CONTRACT_ADDRESS=${VITE_CONTRACT_ADDRESS}
+ node:
+ image: node:18
+ working_dir: /work
+ volumes:
+ - ./:/work
+ command: npx hardhat node
+ ports:
+ - "8545:8545"
+
+
+8. GitHub Actions Workflows
+# .github/workflows/ci.yml
+name: CI
+on: [push, pull_request]
+jobs:
+ test:
+ runs-on: ubuntu-latest
+ steps:
+ - uses: actions/checkout@v4
+ - name: Setup Node
+ uses: actions/setup-node@v4
+ with: node-version: 18
+ - name: Install deps
+ run: npm ci
+ - name: Run tests
+ run: npm test
+ secret-scan:
+ runs-on: ubuntu-latest
+ steps:
+ - uses: actions/checkout@v4
+ - name: Run trufflehog
+ run: |
+ python -m pip install --upgrade pip
+ pip install trufflehog
+ trufflehog filesystem --entropy=False .
+# .github/workflows/auto-sign-deploy.yml
+name: Auto Sign and Deploy Smart Contracts
+on:
+ push:
+ branches: [ main ]
+ workflow_dispatch:
+permissions:
+ contents: write
+jobs:
+ build-sign-deploy:
+ runs-on: ubuntu-latest
+ steps:
+ - uses: actions/checkout@v4
+ with:
+ persist-credentials: false
+ fetch-depth: 0
+ - name: Setup Node.js
+ uses: actions/setup-node@v4
+ with:
+ node-version: 20
+ - name: Install dependencies
+ run: npm ci
+ - name: Configure SSH Commit Signing
+ env:
+ SSH_PRIVATE_KEY: ${{ secrets.SSH_SIGNING_KEY }}
+ run: |
+ mkdir -p ~/.ssh
+ echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+ chmod 600 ~/.ssh/id_ed25519
+ ssh-keygen -y -f ~/.ssh/id_ed25519 > ~/.ssh/id_ed25519.pub
+git config --global gpg.format ssh
+ git config --global user.signingkey ~/.ssh/id_ed25519.pub
+ git config --global commit.gpgsign true
+ git config --global user.name "${{ github.actor }}"
+ git config --global user.email "${{ github.actor }}@users.noreply.github.com"
+ - name: Re-sign Commits
+ run: |
+ git rebase --exec 'git commit --amend --no-edit -n -S' -i --root || true
+ git push origin HEAD --force-with-lease
+ - name: Build Smart Contracts
+ run: npx hardhat compile
+ - name: Run Contract Tests
+ run: npx hardhat test
+ - name: Deploy Smart Contracts
+ env:
+ DEPLOYER_PRIVATE_KEY: ${{ secrets.DEPLOYER_PRIVATE_KEY }}
+ RPC_URL: ${{ secrets.RPC_URL }}
+ ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
+ run: |
+ npx hardhat run scripts/deploy.js --network sepolia
+
+
+9. Env templates and gh secret helper
+# envs/.env.dev
+PRIVATE_KEY=REPLACE_ME_PRIVATE_KEY_TESTNET
+RPC_URL=http://localhost:8545
+VITE_CONTRACT_ADDRESS=0x0000000000000000000000000000000000000000
+# ... other placeholders
+# gh_secret_commands.sh
+gh secret set DEPLOYER_PRIVATE_KEY --body "REPLACE_ME_PRIVATE_KEY"
+gh secret set RPC_URL --body "REPLACE_ME_RPC_URL"
+# ... other secret commands
+
+10. Notifier script (ledgerflex-notifier.js)
+// scripts/ledgerflex-notifier.js (simplified)
+import axios from "axios";
+import { ethers } from "ethers";
+import sgMail from "@sendgrid/mail";
+sgMail.setApiKey(process.env.SENDGRID_API_KEY || "");
+const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
+const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, abi.abi, provider);
+contract.on("Deposited", async (user, amount, event) => {
+ const value = ethers.formatEther(amount);
+ // LedgerFlex
+ if (process.env.LEDGERFLEX_API_KEY) {
+ await axios.post("https://api.ledgerflex.io/v1/transactions", { txHash: event.transactionHash, wallet: user, amount: value }, { headers: { "x-api-key": process.env.LEDGERFLEX_API_KEY, "x-api-secret": process.env.LEDGERFLEX_SECRET } });
+ }
+ // Slack / Discord / Email notifications...
+
+
+11. README and Next Steps
+README Quickstart: 1. Install dependencies: npm ci 2. Start local hardhat node: npx hardhat node 3. Deploy to local: npx hardhat run scripts/deploy.js --network
+localhost 4. Start frontend: cd frontend && npm run dev Next Steps: - Replace placeholders in envs/*.env with real keys. - Add GitHub secrets via gh or GitHub
+UI. - Test workflows by pushing to main. - Use Ledger hardware wallet for production key storage.
+
+
+12. Full Raw Code Attachments and Location
+All files shown above are included in the repository scaffold created during the conversation. If you want a ZIP of the project scaffold, you can run the create
+script provided in the conversation or request the ZIP here and I will generate it.
+About the Author
+Jason Simpson is a developer and researcher focused on blockchain, AI integration, and automation systems. His projects combine smart contracts,
+decentralized ledgers, and AI-driven decision logic to build next-generation financial platforms. Tagline: Building the bridge between AI and blockchain
+automation.
+Jason Simpson • AI Ledger Automation Guide • Generated PDF
+
+
+
+
